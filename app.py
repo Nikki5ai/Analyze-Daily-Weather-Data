@@ -6,59 +6,74 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
 # Step 1: Load the Data
-df = pd.read_csv('weather.csv')
+try:
+    df = pd.read_csv('weather.csv')
+except FileNotFoundError:
+    print("Error: File 'weather.csv' not found. Please check the file path.")
+    exit()
 
 # Step 2: Data Exploration
 print(df.head())
 print(df.info())
 print(df.describe())
 
+# Handle missing data
+df = df.dropna()  # Drop rows with missing values
+
 # Step 3: Data Visualization
-sns.pairplot(df[['MinTemp', 'MaxTemp', 'Rainfall']])
-plt.show()
+if all(col in df.columns for col in ['MinTemp', 'MaxTemp', 'Rainfall']):
+    sns.pairplot(df[['MinTemp', 'MaxTemp', 'Rainfall']])
+    plt.show()
+else:
+    print("Warning: One or more columns ['MinTemp', 'MaxTemp', 'Rainfall'] are missing.")
 
-# Step 4: Feature Engineering (if needed)
+# Step 4: Feature Engineering
+if 'Date' in df.columns:
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df = df.dropna(subset=['Date'])  # Drop rows with invalid dates
+    df['Month'] = df['Date'].dt.month
+else:
+    print("Warning: 'Date' column not found. Feature engineering skipped.")
 
-# Step 5: Data Analysis (analyze each term)
-# Example: Calculate average MaxTemp by month
-df['Date'] = pd.to_datetime(df['Date'])
-df['Month'] = df['Date'].dt.month
-monthly_avg_max_temp = df.groupby('Month')['MaxTemp'].mean()
+# Step 5: Data Analysis
+if 'Month' in df.columns and 'MaxTemp' in df.columns:
+    monthly_avg_max_temp = df.groupby('Month')['MaxTemp'].mean()
 
-# Step 6: Data Visualization (Part 2)
-plt.figure(figsize=(10, 5))
-plt.plot(monthly_avg_max_temp.index, monthly_avg_max_temp.values, marker='o')
-plt.xlabel('Month')
-plt.ylabel('Average Max Temperature')
-plt.title('Monthly Average Max Temperature')
-plt.grid(True)
-plt.show()
+    # Step 6: Data Visualization (Part 2)
+    plt.figure(figsize=(10, 5))
+    plt.plot(monthly_avg_max_temp.index, monthly_avg_max_temp.values, marker='o')
+    plt.xlabel('Month')
+    plt.ylabel('Average Max Temperature')
+    plt.title('Monthly Average Max Temperature')
+    plt.grid(True)
+    plt.show()
+else:
+    print("Warning: Unable to analyze or plot monthly average max temperature.")
 
-# Step 7: Advanced Analysis (e.g., predict Rainfall)
-# Prepare the data for prediction
-X = df[['MinTemp', 'MaxTemp']]
-y = df['Rainfall']
+# Step 7: Advanced Analysis
+if all(col in df.columns for col in ['MinTemp', 'MaxTemp', 'Rainfall']):
+    X = df[['MinTemp', 'MaxTemp']]
+    y = df['Rainfall']
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Create and train a linear regression model
-model = LinearRegression()
-model.fit(X_train, y_train)
+    # Create and train the model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
 
-# Make predictions and calculate the Mean Squared Error
-y_pred = model.predict(X_test)
-mse = mean_squared_error(y_test, y_pred)
-print(f'Mean Squared Error for Rainfall Prediction: {mse}')
+    # Predictions and MSE
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    print(f'Mean Squared Error for Rainfall Prediction: {mse}')
+else:
+    print("Error: Columns ['MinTemp', 'MaxTemp', 'Rainfall'] are required for prediction.")
 
-# Step 8: Conclusions and Insights (analyze each term)
-# Example: Identify the highest and lowest rainfall months
-highest_rainfall_month = monthly_avg_max_temp.idxmax()
-lowest_rainfall_month = monthly_avg_max_temp.idxmin()
-print(f'Highest rainfall month: {highest_rainfall_month}, Lowest rainfall month: {lowest_rainfall_month}')
-
-# Step 9: Communication (Optional)
-
-# Step 10: Future Work (Optional)
-
-# Save or display the results and potentially export to a report or presentation.
+# Step 8: Conclusions and Insights
+if 'Rainfall' in df.columns and 'Month' in df.columns:
+    monthly_rainfall = df.groupby('Month')['Rainfall'].sum()
+    highest_rainfall_month = monthly_rainfall.idxmax()
+    lowest_rainfall_month = monthly_rainfall.idxmin()
+    print(f'Highest rainfall month: {highest_rainfall_month}, Lowest rainfall month: {lowest_rainfall_month}')
+else:
+    print("Error: Columns 'Rainfall' and 'Month' are required for insights.")
